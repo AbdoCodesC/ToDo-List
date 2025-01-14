@@ -22,27 +22,62 @@ db.connect()
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-let items = [
-  { id: 1, title: "Buy milk" },
-  { id: 2, title: "Finish homework" },
-];
+let items = [];
 
-app.get("/", (req, res) => {
+async function getItems() {
+  try {
+    const result = await db.query("SELECT * FROM items");
+    items = result.rows;
+    console.log(items);
+  } catch (err) {
+    console.log("Error Happened!");
+  }
+}
+
+app.get("/", async (req, res) => {
+  await getItems();
   res.render("index.ejs", {
     listTitle: "Today",
     listItems: items,
   });
 });
 
-app.post("/add", (req, res) => {
+app.post("/add", async (req, res) => {
   const item = req.body.newItem;
-  items.push({ title: item });
+  try {
+    await db.query("INSERT INTO items (title) VALUES ($1)", [item]);
+    console.log("Insert Success!");
+  } catch (err) {
+    console.log("Error Happened!");
+  }
   res.redirect("/");
 });
 
-app.post("/edit", (req, res) => {});
+app.post("/edit", async (req, res) => {
+  const updatedItemId = req.body.updatedItemId;
+  const updatedItemTitle = req.body.updatedItemTitle;
+  try {
+    await db.query("UPDATE items SET title = $1 WHERE id = $2", [
+      updatedItemTitle,
+      updatedItemId,
+    ]);
+    console.log("Update Success!");
+  } catch (err) {
+    console.log("Error Happened!");
+  }
+  res.redirect("/");
+});
 
-app.post("/delete", (req, res) => {});
+app.post("/delete", async (req, res) => {
+  const deleteItemId = req.body.deleteItemId;
+  try {
+    await db.query("DELETE FROM items WHERE id = $1", [deleteItemId]);
+    console.log("Item Deleted!");
+  } catch (err) {
+    console.log("Error with deletion!");
+  }
+  res.redirect("/");
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
